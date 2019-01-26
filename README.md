@@ -1,26 +1,33 @@
 # clojure-elastic-apm
 
-A Clojure wrapper for Elastic APM Java API.
+A Clojure wrapper for Elastic APM Java Agent's Public API.
 
 NOTE: This library is not released yet. The usage information below is an attempt to document how the library could eventually be used
 and to ensure the library works in most common use cases. The information is subject to change.
 
 ## Installation
 
-Add this to your Leiningen project `:dependencies`:
+First you need to download Elastic APM Java Agent and configure it. Follow the instructions in
+[https://www.elastic.co/guide/en/apm/agent/java/current/intro.html](APM Java Agent documentation) on how to do so.
+
+The easiest way to enable the Java Agent on development is to add it to `:jvm-opts` in Leiningen:
 
 ```
+:jvm-opts ["-javaagent:path/to/elastic-apm-agent-AGENT_VERSION.jar"]
+```
+
+Now with the agent setup, you need to add two dependencies to your project: one for the Elastic APM Public API and
+one for clojure-elastic-apm. clojure-elastic-apm doesn't provide this dependency automatically, because it should
+match exactly with the agent version.
+
+So, add these to your project.clj dependencies:
+
+```
+[co.elastic.apm/apm-agent-api "AGENT_VERSION"]
 [yleisradio/clojure-elastic-apm "0.1.0"]
 ```
 
-You also need to download Elastic APM Java Agent and specify the `-javaagent` option on your java command line. With leiningen, add:
-
-```
-:jvm-opts ["-javaagent:path/to/elastic-apm-agent-VERSION.jar"]
-```
-
-Follow the [https://www.elastic.co/guide/en/apm/agent/java/current/intro.html](APM Java Agent documentation) on how to download and
-configure the agent. Note that the `elastic.apm.application_packages` configuration option should be the top level namespace in your
+Note, in the agent configuration, the `elastic.apm.application_packages` option should be the top level namespace in your
 Clojure application, but with hyphens replaced with underscores.
 
 ## Usage
@@ -31,16 +38,10 @@ Wrap any code block into APM transaction and track spans within the transaction:
 (require '[clojure-elastic-apm.core :as apm])
 
 (apm/with-apm-transaction [tx {:name "MyTransaction" :type "Background Job"}]
-  (apm/add-tag tx "some_tag" "some value")
+  (do-something)
 
   (apm/with-apm-span [span {:name "Operation"}]
-    ; do something exciting here
-    (Thread/sleep 200))
-
-  (apm/with-apm-span [span {:name "AnotherOperation"}]
-    ; do something exciting here
-    (apm/add-tag span "another_tag" "another value")
-    (Thread/sleep 100)))
+    (do-something-in-a-span)))
 ```
 
 The options hash for `with-apm-transaction` accepts the following options:
@@ -59,6 +60,59 @@ The options hash for `with-apm-span` accepts the following options:
 
 In both cases, all options are optional and the options hash can be omitted completely. However, it's good idea to at least provide the name. At the time of writing, the default transaction type
 is `"custom"`.
+
+### Getting current active transaction or span
+
+Current active transaction can be retrieved by calling `apm/current-apm-transaction`. The active span can be retrieved with `apm/current-apm-span`.
+
+Note that these functions might return a "noop" span or transaction in case there's no active span/transaction. This means you never need to check
+for null values. You can still capture exceptions on noop spans/transactions - they just will be reported at the application level and will not
+be associated with any particular span.
+
+### Capture and report exceptions
+
+Any exceptions thrown out of `with-apm-transaction` and `with-apm-span` macro bodies will automatically be captured and reported on the APM
+server and then rethrown.
+
+You can also manually report exceptions that you don't wish to propagate further by calling `apm/capture-exception`:
+
+```
+(with-apm-transaction [tx {:name "BackgroundJob"}]
+  (try
+    (do-something)
+    (catch Exception e
+      (apm/capture-exception tx e)
+      (do-something-else))))
+```
+
+
+### Adding tags
+
+You can add tags to any transaction or span by using `apm/add-tag`:
+
+```
+(apm/with-apm-transaction [tx {:name "CreatePayment"}]
+  (let [payment (create-payment ...)]
+    (apm/add-tag tx "payment_id" (:id payment)
+    (store-payment payment)
+    ...)))
+```
+
+Only string keys and values are supported for tags by APM, so for anything non-string, `add-tag` will
+convert the key or value to a string using `.toString`.
+
+### Overriding transaction name
+
+If you wish to override the transaction name (for example, because you didn't know it when starting the transaction), you can do so
+any time by calling `apm/set-name` on the transaction:
+
+```
+(apm/with-apm-transaction [tx]
+  (do-something)
+  (apm/set-name tx "BackgroundJob"))
+```
+
+See the section below on using with Ring for a more concrete example where this might be useful.:
 
 ### Using with Ring
 
@@ -104,7 +158,8 @@ from request and the transaction name derived from compojure route information:
 ```clojure
 (defroutes app-routes
   (GET "/exchange_rates/:base" request
-    (apm/set-transaction-name (:clojure-elastic-apm/transaction) (str (:compojure/route request)))
+    (when-let [tx (:clojure-elastic-apm/transaction request)]
+      (apm/set-name tx (str (:compojure/route request))))
     {:status 200 :body ...}))
 ```
 
