@@ -61,6 +61,42 @@ The options hash for `with-apm-span` accepts the following options:
 In both cases, all options are optional and the options hash can be omitted completely. However, it's good idea to at least provide the name. At the time of writing, the default transaction type
 is `"custom"`.
 
+### Manually starting, activating and ending transactions and spans
+
+The `with-apm-transaction` and `with-apm-span` macros are useful if the transaction or span starts and ends in the same thread, which is often
+the case. However, if you need to track transactions that start in a different thread than where they end, you can also manually start a transaction
+in one thread, hand it off to another thread and activate it there.
+
+For example, consider a scenario where your HTTP API accepts a request to build reports. You queue each request to be processed by a `ExecutorService`
+and then send email when things finish. If you wanted to measure the time between HTTP API getting the request and it being processed, you could
+do something like this:
+
+```clojure
+(defn process-report-request [tx request]
+  (try
+    (with-open [scope (apm/activate tx)]
+      (build-and-send-report request))
+    (catch Exception e
+      (send-failure-notice request)
+      (apm/capture-exception e))
+    (finally
+      (apm/end tx))))
+
+(defn handle-report-request [request]
+  (let [tx (apm/start-transaction {:name "" :type apm/type-request})]
+    (.submit executor #(process-report-request tx request))
+    {:status 201 :body "Accepted"))
+```
+
+The process is similar for spans, but instead of `apm/start-transaction` you would use `apm/create-span`.
+All the same options, except for the activation, are supported here.
+
+Remember to always close any resources, or otherwise you might cause memory leaks:
+
+1. Always wrap any code in span/transaction to try..catch and end the transaction in `finally` block using `apm/end`
+2. Use `with-open` when activating a span/transaction
+3. The scope opened by `apm/activate` needs to be closed in the same thread
+
 ### Getting current active transaction or span
 
 Current active transaction can be retrieved by calling `apm/current-apm-transaction`. The active span can be retrieved with `apm/current-apm-span`.
