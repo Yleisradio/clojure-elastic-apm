@@ -202,3 +202,25 @@ from request and the transaction name derived from compojure route information:
 If you have a lot of routes or find this to be tedious, it might be worth it creating a custom routes macro that does this automatically. This is not included here because integration with compojure and other routing
 libraries is out of this project's scope.
 
+## Development
+
+### Running tests
+
+There are some tests for the functionality. To run them, you need to have ElasticSearch, Kibana and APM server running at ports 9200, 5601 and
+8200 respectively. You can either manually install the necessary components, or use the provided docker-compose file to launch all three
+as containers:
+
+```bash
+$ docker-compose up -d
+```
+
+Then, to run tests:
+
+```bash
+$ lein test
+```
+
+Note that the tests are extremely slow. The APM Agent's Public API doesn't provide a way to retrieve the information we set in clojure-elastic-apm.
+The only way to access all the details is to fetch the transaction info from ElasticSearch. This takes time, because the agent can sync only every
+1 second and the APM server doesn't flush to ElasticSearch all the time either.
+

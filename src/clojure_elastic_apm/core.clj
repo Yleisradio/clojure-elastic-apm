@@ -8,10 +8,12 @@
   (ElasticApm/currentSpan))
 
 (defn add-tag [^Span span-or-tx k v]
-  (.addTag span-or-tx k v))
+  (.addTag span-or-tx (name k) (str v)))
 
 (defn set-name [^Span span-or-tx name]
   (.setName span-or-tx name))
+
+(def type-request Transaction/TYPE_REQUEST)
 
 (defn start-transaction
   ([]
@@ -25,7 +27,7 @@
      (when tx-type
        (.setType tx tx-type))
      (doseq [[k v] tags]
-       (add-tag tx (name k) (str v)))
+       (add-tag tx k v))
      tx)))
 
 (defn create-span
@@ -38,7 +40,7 @@
      (when span-name
        (set-name span span-name))
      (doseq [[k v] tags]
-       (add-tag span (name k) (str v)))
+       (add-tag span k v))
      span)))
 
 (defn end [^Span span-or-tx]
