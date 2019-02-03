@@ -8,12 +8,17 @@ and to ensure the library works in most common use cases. The information is sub
 ## Installation
 
 First you need to download Elastic APM Java Agent and configure it. Follow the instructions in
-[https://www.elastic.co/guide/en/apm/agent/java/current/intro.html](APM Java Agent documentation) on how to do so.
+[APM Java Agent documentation](https://www.elastic.co/guide/en/apm/agent/java/current/intro.html)
+on how to do so.
 
-The easiest way to enable the Java Agent on development is to add it to `:jvm-opts` in Leiningen:
+The easiest way to enable the Java Agent on development is to add it to `:jvm-opts` in Leiningen
+along with the agent's recommended configuration options:
 
-```
-:jvm-opts ["-javaagent:path/to/elastic-apm-agent-AGENT_VERSION.jar"]
+```clojure
+:jvm-opts ["-javaagent:path/to/elastic-apm-agent-AGENT_VERSION.jar"
+           "-Delastic.apm.service_name=my-app-production"
+           "-Delastic.apm.application_packages=my_app"
+           "-Delastic.apm.server_urls=http://localhost:8200"]
 ```
 
 Now with the agent setup, you need to add two dependencies to your project: one for the Elastic APM Public API and
@@ -22,7 +27,7 @@ match exactly with the agent version.
 
 So, add these to your project.clj dependencies:
 
-```
+```clojure
 [co.elastic.apm/apm-agent-api "AGENT_VERSION"]
 [yleisradio/clojure-elastic-apm "0.1.0"]
 ```
