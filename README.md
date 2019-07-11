@@ -29,7 +29,7 @@ So, add these to your project.clj dependencies:
 
 ```clojure
 [co.elastic.apm/apm-agent-api "AGENT_VERSION"]
-[yleisradio/clojure-elastic-apm "0.1.0"]
+[clojure-elastic-apm "0.1.0"]
 ```
 
 Note, in the agent configuration, the `elastic.apm.application_packages` option should be the top level namespace in your
@@ -228,4 +228,3 @@ $ lein test
 Note that the tests are extremely slow. The APM Agent's Public API doesn't provide a way to retrieve the information we set in clojure-elastic-apm.
 The only way to access all the details is to fetch the transaction info from ElasticSearch. This takes time, because the agent can sync only every
 1 second and the APM server doesn't flush to ElasticSearch all the time either.
-
