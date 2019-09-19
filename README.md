@@ -2,9 +2,6 @@
 
 A Clojure wrapper for Elastic APM Java Agent's Public API.
 
-NOTE: This library is not released yet. The usage information below is an attempt to document how the library could eventually be used
-and to ensure the library works in most common use cases. The information is subject to change.
-
 ## Installation
 
 First you need to download Elastic APM Java Agent and configure it. Follow the instructions in
