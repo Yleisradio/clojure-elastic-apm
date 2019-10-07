@@ -26,7 +26,7 @@ So, add these to your project.clj dependencies:
 
 ```clojure
 [co.elastic.apm/apm-agent-api "AGENT_VERSION"]
-[yleisradio/clojure-elastic-apm "0.1.0"]
+[yleisradio/clojure-elastic-apm "0.2.0"]
 ```
 
 Note, in the agent configuration, the `elastic.apm.application_packages` option should be the top level namespace in your
