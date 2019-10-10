@@ -10,11 +10,3 @@
           (when status
             (.setResult tx (str "HTTP " status)))
           response)))))
-
-(defn with-apm-tx-tags [handler]
-  (fn [{:keys [request-method uri] :as request}]
-    (when-let [tx (:clojure-elastic-apm/transaction request)]
-      (let [method-name (upper-case (name request-method))
-            transaction-name (str method-name " " uri)]
-        (apm/add-tag tx "transaction" transaction-name)))
-    (handler request)))
