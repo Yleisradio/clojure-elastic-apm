@@ -52,6 +52,13 @@
 (defn capture-exception [^Span span-or-tx ^Exception e]
   (.captureException span-or-tx e))
 
+(defn catch-error-to-apm [thunk]
+  (with-apm-transaction [tx (current-apm-transaction)]
+    (try
+      (thunk)
+      (catch Exception e
+        (capture-exception tx e)))))
+
 (defn apm-transaction*
   ([func]
    (apm-transaction* func {}))
