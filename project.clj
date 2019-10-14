@@ -1,4 +1,4 @@
-(defproject clojure-elastic-apm "0.2.1"
+(defproject clojure-elastic-apm "0.2.2"
   :description "Clojure wrapper for Elastic APM Java Agent"
   :url "https://github.com/Yleisradio/clojure-elastic-apm"
   :license {:name "Eclipse Public License"
