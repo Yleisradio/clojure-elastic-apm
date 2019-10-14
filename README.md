@@ -123,6 +123,9 @@ You can also manually report exceptions that you don't wish to propagate further
       (do-something-else))))
 ```
 
+A function specifically designed for doing this, `clojure-elastic-apm.core/catch-error-to-apm` is included, which takes a thunk function, attempts 
+to evaluate it, and captures the exception if one occurs.
+
 
 ### Adding tags
 
