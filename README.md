@@ -170,6 +170,33 @@ For convenience, the `clojure-elastic-apm.ring` namespace provides `wrap-apm-tra
 
 With this setup, all requests will be tracked as APM transactions with `"request"` type. The transaction will be named `METHOD /path`.
 
+#### Filtering and matching URIs
+
+The `wrap-apm-transaction` middleware takes an optional argument, that allows you to pass a list of URI patterns, which 
+will be matched against any requests, and only log a transaction for those that match the pattern:
+
+```clojure
+(require '[clojure-elastic-apm.ring :as apm-ring])
+
+(def app (->> app-routes
+              wrap-params
+              wrap-json-params
+              (apm-ring/wrap-apm-transaction ["/*/*/_"])))
+```
+
+The pattern format breaks up the URI into segments on the slashes ("/") and matches the segments with the following syntax:
+- `*`: matches any data in the segment, and keeps it in the resulting transaction name
+- `_`: matches any data in the segment, but ignores it in the resulting tx name, instead inserting an underscore('_') character
+- any other string: matches only if the segment in the pattern and the URI match exactly, and retains the string in the tx name
+
+In the example above, the URI `/v1/foo/124` would match and yield `/v1/foo/*` as the tx name, while `/v1/foo` would not. This allows you to both ignore all but a specific set of URLs, while also grouping URLs in the APM tx logs by leaving out 
+unnecessary extra detail like URL parameters.
+
+If any segments fail to match one of the given patterns, then no transaction is logged. The matcher will attempt to match
+the patterns in descending order as given in the vector. Matches are "eager": a short pattern like `"/*"` will match any URI, but ignore segments after it (so `/*` would match against `/v1/foo/bar` but only return `/v1`).
+
+#### Accessing the current transaction
+
 You can access the APM transaction created by the middleware from the request map under `:clojure-elastic-apm/transaction` key.
 
 No other request information will be added to the transaction. The APM Java Agent's Public API, at the time of writing this library, doesn't allow
