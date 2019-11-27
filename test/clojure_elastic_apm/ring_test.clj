@@ -9,8 +9,8 @@
     (= (apm-ring/match-uri "/*/*" "/v1/foo") "/v1/foo")
     (= (apm-ring/match-uri "/*/*/*" "/v1/foo/bar") "/v1/foo/bar"))
   (testing "_ matches but ignores value"
-    (= (apm-ring/match-uri "/*/_" "/v1/foo") "/v1/*")
-    (= (apm-ring/match-uri "/_/foo" "/v1/foo") "/*/foo"))
+    (= (apm-ring/match-uri "/*/_" "/v1/foo") "/v1/_")
+    (= (apm-ring/match-uri "/_/foo" "/v1/foo") "/_/foo"))
   (testing "exact string matches and returns value"
     (= (apm-ring/match-uri "/v1/*" "/v1/foo") "/v1/foo")
     (= (apm-ring/match-uri "/*/foo" "/v2/foo") "/v2/foo")

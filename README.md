@@ -186,7 +186,7 @@ will be matched against any requests, and only log a transaction for those that 
 
 The pattern format breaks up the URI into segments on the slashes ("/") and matches the segments with the following syntax:
 - `*`: matches any data in the segment, and keeps it in the resulting transaction name
-- `_`: matches any data in the segment, but ignores it in the resulting tx name, instead inserting an asterisk('*') character
+- `_`: matches any data in the segment, but ignores it in the resulting tx name, instead inserting an underscore('_') character
 - any other string: matches only if the segment in the pattern and the URI match exactly, and retains the string in the tx name
 
 In the example above, the URI `/v1/foo/124` would match and yield `/v1/foo/*` as the tx name, while `/v1/foo` would not. This allows you to both ignore all but a specific set of URLs, while also grouping URLs in the APM tx logs by leaving out 

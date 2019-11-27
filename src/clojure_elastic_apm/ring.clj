@@ -8,7 +8,7 @@
         matcher (fn [p u]
                   (cond
                     (= p "*") u
-                    (= p "_") "*"
+                    (= p "_") "_"
                     (= p u) u
                     :else false))]
     (if (> (count pattern-segs)
