@@ -2,7 +2,7 @@
   (:require [clojure-elastic-apm.core :refer [with-apm-transaction
                                               type-request]]))
 
-(defn match-uris [pattern uri]
+(defn match-uri [pattern uri]
   (let [pattern-segs (clojure.string/split pattern #"/")
         uri-segs (clojure.string/split uri #"/")
         matcher (fn [p u]
@@ -32,7 +32,7 @@
   ([patterns handler]
    (fn [{:keys [request-method uri] :as request}]
      (let [matched (->> patterns
-                        (map #(match-uris % uri))
+                        (map #(match-uri % uri))
                         (drop-while false?)
                         (first))
            short-uri (if matched matched "_")
