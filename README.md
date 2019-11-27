@@ -181,7 +181,7 @@ will be matched against any requests, and only log a transaction for those that 
 (def app (->> app-routes
               wrap-params
               wrap-json-params
-              apm-ring/wrap-apm-transaction ["/*/*/_"]))
+              (apm-ring/wrap-apm-transaction ["/*/*/_"])))
 ```
 
 The pattern format breaks up the URI into segments on the slashes ("/") and matches the segments with the following syntax:

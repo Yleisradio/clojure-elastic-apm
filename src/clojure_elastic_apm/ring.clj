@@ -35,8 +35,7 @@
                         (map #(match-uri % uri))
                         (drop-while false?)
                         (first))
-           short-uri (if matched matched "_")
-           tx-name (str (.toUpperCase (name request-method)) " " short-uri)]
+           tx-name (str (.toUpperCase (name request-method)) " " matched)]
        (if matched
          (with-apm-transaction [tx {:name tx-name :type type-request}]
            (let [{:keys [status] :as response} (handler (assoc request :clojure-elastic-apm/transaction tx))]
