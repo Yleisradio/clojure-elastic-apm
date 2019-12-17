@@ -29,7 +29,7 @@
            (when status
              (.setResult tx (str "HTTP " status)))
            response)))))
-  ([patterns handler]
+  ([handler patterns]
    (fn [{:keys [request-method uri] :as request}]
      (let [matched (->> patterns
                         (map #(match-uri % uri))
