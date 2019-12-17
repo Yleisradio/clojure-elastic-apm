@@ -178,10 +178,10 @@ will be matched against any requests, and only log a transaction for those that 
 ```clojure
 (require '[clojure-elastic-apm.ring :as apm-ring])
 
-(def app (->> app-routes
-              wrap-params
-              wrap-json-params
-              (apm-ring/wrap-apm-transaction ["/*/*/_"])))
+(def app (-> app-routes
+             wrap-params
+             wrap-json-params
+             (apm-ring/wrap-apm-transaction ["/*/*/_"])))
 ```
 
 The pattern format breaks up the URI into segments on the slashes ("/") and matches the segments with the following syntax:
