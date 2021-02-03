@@ -22,14 +22,16 @@
       (reset! transaction-id (.getId tx))
       (is (not= "" (.getId tx)) "tx did not activate in the with-apm-transactionblock")
       (is (= (.getId tx) (.getId (apm/current-apm-transaction))) "tx did not activate in the with-apm-transaction block")
-      (apm/add-tag tx "t3" "3")
+      (apm/set-label tx "t3" true)
+      (apm/set-label tx "t4" (reify Object (toString [_] "Label 4")))
       (Thread/sleep 100))
     (is (= "" (.getId (apm/current-apm-transaction))) "tx did not deactive after with-apm-transaction block ended")
     (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
       (is (= "TestTransaction" (get-in tx-details [:transaction :name])))
-      (is (= "1" (get-in tx-details [:context :tags :t1])))
-      (is (= "2" (get-in tx-details [:context :tags :t2])))
-      (is (= "3" (get-in tx-details [:context :tags :t3]))))))
+      (is (= "1" (get-in tx-details [:labels :t1])))
+      (is (= 2 (get-in tx-details [:labels :t2])))
+      (is (true? (get-in tx-details [:labels :t3])))
+      (is (= "Label 4" (get-in tx-details [:labels :t4]))))))
 
 (deftest with-apm-transaction-no-activation-test
   (apm/with-apm-transaction [tx {:name "TestTransaction" :activate? false}]
@@ -46,14 +48,14 @@
       (apm/with-apm-span [span {:name "TestSpan" :tags {"t1" "1"}}]
         (reset! span-id (.getId span))
         (Thread/sleep 100)
-        (apm/add-tag span "t1" "1")
+        (apm/set-label span "t1" "1")
         (is (not= (.getId tx) (.getId (apm/current-apm-span))) "span did not activate in the with-apm-span block")
         (is (= (.getId span) (.getId (apm/current-apm-span))) "span did not activate in the with-apm-span block")))
     (is (= "" (.getId (apm/current-apm-span))) "span did not deactivate after the with-apm-span block")
     (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))
-          span-details (es-find-first-document (str "(processor.event:span%20AND%20span.hex_id:" @span-id ")"))]
+          span-details (es-find-first-document (str "(processor.event:span%20AND%20span.id:" @span-id ")"))]
       (is (= "TestSpan" (get-in span-details [:span :name])))
-      (is (= "1" (get-in span-details [:context :tags :t1])))
+      (is (= "1" (get-in span-details [:labels :t1])))
       (is (= @transaction-id (get-in span-details [:transaction :id])))
       (is (= 1 (get-in tx-details [:transaction :span_count :started]))))))
 
@@ -69,5 +71,5 @@
                                     (reset! transaction-id (.getId tx))
                                     (throw (RuntimeException. "Simulated error")))))
     (let [error-details (es-find-first-document (str "(processor.event:error%20AND%20transaction.id:" @transaction-id ")"))]
-      (is (= "java.lang.RuntimeException" (get-in error-details [:error :exception :type])))
-      (is (= "Simulated error" (get-in error-details [:error :exception :message]))))))
+      (is (= "java.lang.RuntimeException" (get-in error-details [:error :exception 0 :type])))
+      (is (= "Simulated error" (get-in error-details [:error :exception 0 :message]))))))

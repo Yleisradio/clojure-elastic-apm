@@ -20,24 +20,26 @@
           (clojure.string/join "/" matches)
           matched?)))))
 
-(defn wrap-apm-transaction 
-  ([handler] 
-   (fn [{:keys [request-method uri] :as request}]
-     (let [tx-name (str (.toUpperCase (name request-method)) " " uri)]
-       (with-apm-transaction [tx {:name tx-name :type type-request}]
+(defn wrap-apm-transaction
+  ([handler]
+   (fn [{:keys [request-method uri headers] :as request}]
+     (let [tx-name (str (.toUpperCase (name request-method)) " " uri)
+           traceparent (get-in headers ["traceparent"])]
+       (with-apm-transaction [tx {:name tx-name :type type-request :traceparent traceparent}]
          (let [{:keys [status] :as response} (handler (assoc request :clojure-elastic-apm/transaction tx))]
            (when status
              (.setResult tx (str "HTTP " status)))
            response)))))
   ([handler patterns]
-   (fn [{:keys [request-method uri] :as request}]
+   (fn [{:keys [request-method uri headers] :as request}]
      (let [matched (->> patterns
                         (map #(match-uri % uri))
                         (drop-while false?)
                         (first))
-           tx-name (str (.toUpperCase (name request-method)) " " matched)]
+           tx-name (str (.toUpperCase (name request-method)) " " matched)
+           traceparent (get-in headers ["traceparent"])]
        (if matched
-         (with-apm-transaction [tx {:name tx-name :type type-request}]
+         (with-apm-transaction [tx {:name tx-name :type type-request :traceparent traceparent}]
            (let [{:keys [status] :as response} (handler (assoc request :clojure-elastic-apm/transaction tx))]
              (when status
                (.setResult tx (str "HTTP " status)))
