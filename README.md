@@ -26,7 +26,7 @@ So, add these to your project.clj dependencies:
 
 ```clojure
 [co.elastic.apm/apm-agent-api "AGENT_VERSION"]
-[yleisradio/clojure-elastic-apm "0.2.0"]
+[clojure-elastic-apm "0.5.0"]
 ```
 
 Note, in the agent configuration, the `elastic.apm.application_packages` option should be the top level namespace in your
@@ -50,15 +50,18 @@ The options hash for `with-apm-transaction` accepts the following options:
 
 * `:name` - `String` - the transaction name
 * `:type` - `String` - the transaction type (the special type `"request"`, or via `apm/type-request`, should be used for transactions that track requests)
-* `:tags` - `{String String}` - map or sequence of tag names and values to add to the transaction
+* `:labels` - `{String any}` - map or sequence of label names and values to add to the transaction  
+* `:tags` - `{String String}` - ~~map or sequence of label names and values to add to the transaction~~ Deprecated as of 0.5.0
 * `:activate?` - `Boolean` - whether to make the transaction active in the context of the executing thread (defaults to true). When activated, calling `apm/current-apm-transaction` returns this transaction.
+* `:traceparent` - `String` - the trace id when using APM's [Distributed tracing](https://www.elastic.co/guide/en/apm/get-started/current/distributed-tracing.html). Usually value is passed within HTTP request headers.
 
 The options hash for `with-apm-span` accepts the following options:
 
 * `:name` - `String` - the span name
 * `:parent` - `Span` - the parent span, the new span will be created as child of this span (defaults to current active span or transaction)
 * `:activate?` - `Boolean` - whether to make the span active in the context of the executing thread (defaults to true). When activated, calling `apm/current-apm-span` returns this span.
-* `:tags` - `{String String}` - map or sequence of tag names and values to add to the transaction
+* `:labels` - `{String any}` - map or sequence of label names and values to add to the transaction
+* `:tags` - `{String String}` - ~~map or sequence of label names and values to add to the transaction~~ Deprecated as of 0.5.0
 
 In both cases, all options are optional and the options hash can be omitted completely. However, it's good idea to at least provide the name. At the time of writing, the default transaction type
 is `"custom"`.
@@ -87,7 +90,7 @@ do something like this:
 (defn handle-report-request [request]
   (let [tx (apm/start-transaction {:name "" :type apm/type-request})]
     (.submit executor #(process-report-request tx request))
-    {:status 201 :body "Accepted"))
+    {:status 201 :body "Accepted"}))
 ```
 
 The process is similar for spans, but instead of `apm/start-transaction` you would use `apm/create-span`.
@@ -127,20 +130,20 @@ A function specifically designed for doing this, `clojure-elastic-apm.core/catch
 to evaluate it, and captures the exception if one occurs.
 
 
-### Adding tags
+### Adding labels
 
-You can add tags to any transaction or span by using `apm/add-tag`:
+You can add labels to any transaction or span by using `apm/set-label`:
 
 ```
 (apm/with-apm-transaction [tx {:name "CreatePayment"}]
   (let [payment (create-payment ...)]
-    (apm/add-tag tx "payment_id" (:id payment)
+    (apm/set-label tx "payment_id" (:id payment)
     (store-payment payment)
     ...)))
 ```
 
-Only string keys and values are supported for tags by APM, so for anything non-string, `add-tag` will
-convert the key or value to a string using `.toString`.
+APM supports labels with string keys and string, number or boolean values. Any other types `set-label` will convert
+to a string using `.toString`.
 
 ### Overriding transaction name
 
@@ -200,14 +203,14 @@ the patterns in descending order as given in the vector. Matches are "eager": a 
 You can access the APM transaction created by the middleware from the request map under `:clojure-elastic-apm/transaction` key.
 
 No other request information will be added to the transaction. The APM Java Agent's Public API, at the time of writing this library, doesn't allow
-setting transaction context fields. However, if you want to include extra context as tags, it's easy to do so by adding custom middleware:
+setting transaction context fields. However, if you want to include extra context as labels, it's easy to do so by adding custom middleware:
 
 ```clojure
 (defn wrap-apm-transaction-context [handler]
   (fn [request]
     (when-let [tx (:clojure-elastic-apm/transaction request)]
-      (apm/add-tag tx "user_agent" (get-in request [:headers "user-agent"]))
-      (apm/add-tag tx "request_query_string" (:query-string request)))
+      (apm/set-label tx "user_agent" (get-in request [:headers "user-agent"]))
+      (apm/set-label tx "request_query_string" (:query-string request)))
     (handler request)))
 
 (def app (-> app-routes
@@ -255,4 +258,7 @@ $ lein test
 Note that the tests are extremely slow. The APM Agent's Public API doesn't provide a way to retrieve the information we set in clojure-elastic-apm.
 The only way to access all the details is to fetch the transaction info from ElasticSearch. This takes time, because the agent can sync only every
 1 second and the APM server doesn't flush to ElasticSearch all the time either.
+
+Also note that the ElasticSearch docker requires a minimum of 4 gigabytes of memory, so ensure that you have allocated 
+enough memory for your docker containers: from Docker Dashboard Preferences -> Resources -> Advanced -> Memory.
 

@@ -37,4 +37,25 @@
     (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
       (is (= apm/type-request (get-in tx-details [:transaction :type])))
       (is (= "HTTP 200" (get-in tx-details [:transaction :result])))
-      (is (= "GET /foo/bar" (get-in tx-details [:transaction :name]))))))
+      (is (= "GET /foo/bar" (get-in tx-details [:transaction :name])))
+      (is (nil? (:parent tx-details))))))
+
+(deftest wrap-apm-remote-transaction-test
+  (let [transaction-id (atom nil)
+        parent-id "3574dfeefa12d57e"
+        trace-id "0e3e09b4c3ae9837806de794f142cf2f"
+        request {:request-method :get, :uri "/foo/bar" :headers {"traceparent" (str "00-" trace-id "-" parent-id "-01")}}
+        response {:status 200 :body "Ok."}
+        handler (fn [request]
+                  (is (not= "" (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
+                  (is (= (.getId (:clojure-elastic-apm/transaction request)) (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
+                  (reset! transaction-id (.getId (:clojure-elastic-apm/transaction request)))
+                  response)
+        wrapped-handler (apm-ring/wrap-apm-transaction handler ["/*/*"])]
+    (is (= (wrapped-handler request) response))
+    (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
+      (is (= apm/type-request (get-in tx-details [:transaction :type])))
+      (is (= "HTTP 200" (get-in tx-details [:transaction :result])))
+      (is (= "GET /foo/bar" (get-in tx-details [:transaction :name])))
+      (is (= parent-id (get-in tx-details [:parent :id])))
+      (is (= trace-id (get-in tx-details [:trace :id]))))))
