@@ -53,7 +53,7 @@ The options hash for `with-apm-transaction` accepts the following options:
 * `:labels` - `{String any}` - map or sequence of label names and values to add to the transaction  
 * `:tags` - `{String String}` - ~~map or sequence of label names and values to add to the transaction~~ Deprecated as of 0.5.0
 * `:activate?` - `Boolean` - whether to make the transaction active in the context of the executing thread (defaults to true). When activated, calling `apm/current-apm-transaction` returns this transaction.
-* `:traceparent` - `String` - the trace id when using APM's [Distributed tracing](https://www.elastic.co/guide/en/apm/get-started/current/distributed-tracing.html). Usually value is usually passed within HTTP request headers.
+* `:traceparent` - `String` - the trace id when using APM's [Distributed tracing](https://www.elastic.co/guide/en/apm/get-started/current/distributed-tracing.html). Usually value is passed within HTTP request headers.
 
 The options hash for `with-apm-span` accepts the following options:
 
