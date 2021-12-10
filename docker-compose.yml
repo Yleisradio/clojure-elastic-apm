@@ -1,7 +1,7 @@
 version: "3"
 services:
   elasticsearch:
-    image: "docker.elastic.co/elasticsearch/elasticsearch:7.10.2"
+    image: "docker.elastic.co/elasticsearch/elasticsearch:7.16.0"
     container_name: "elasticsearch"
     environment:
       - xpack.security.enabled=false
@@ -14,10 +14,10 @@ services:
       - "9200:9200"
       - "9300:9300"
   kibana:
-    image: "docker.elastic.co/kibana/kibana:7.10.2"
+    image: "docker.elastic.co/kibana/kibana:7.16.0"
     ports:
       - "5601:5601"
   apm-server:
-    image: "docker.elastic.co/apm/apm-server:7.10.2"
+    image: "docker.elastic.co/apm/apm-server:7.16.0"
     ports:
       - "8200:8200"
