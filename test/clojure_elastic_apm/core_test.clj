@@ -24,6 +24,8 @@
       (is (= (.getId tx) (.getId (apm/current-apm-transaction))) "tx did not activate in the with-apm-transaction block")
       (apm/set-label tx "t3" true)
       (apm/set-label tx "t4" (reify Object (toString [_] "Label 4")))
+      (apm/set-result tx "test-result")
+      (apm/set-outcome-success tx)
       (Thread/sleep 100))
     (is (= "" (.getId (apm/current-apm-transaction))) "tx did not deactive after with-apm-transaction block ended")
     (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
@@ -31,7 +33,9 @@
       (is (= "1" (get-in tx-details [:labels :t1])))
       (is (= 2 (get-in tx-details [:labels :t2])))
       (is (true? (get-in tx-details [:labels :t3])))
-      (is (= "Label 4" (get-in tx-details [:labels :t4]))))))
+      (is (= "Label 4" (get-in tx-details [:labels :t4])))
+      (is (= "test-result" (get-in tx-details [:transaction :result])))
+      (is (= "success" (get-in tx-details [:event :outcome]))))))
 
 (deftest with-apm-transaction-no-activation-test
   (apm/with-apm-transaction [tx {:name "TestTransaction" :activate? false}]
@@ -49,6 +53,7 @@
         (reset! span-id (.getId span))
         (Thread/sleep 100)
         (apm/set-label span "t1" "1")
+        (apm/set-outcome-failure span)
         (is (not= (.getId tx) (.getId (apm/current-apm-span))) "span did not activate in the with-apm-span block")
         (is (= (.getId span) (.getId (apm/current-apm-span))) "span did not activate in the with-apm-span block")))
     (is (= "" (.getId (apm/current-apm-span))) "span did not deactivate after the with-apm-span block")
@@ -57,7 +62,8 @@
       (is (= "TestSpan" (get-in span-details [:span :name])))
       (is (= "1" (get-in span-details [:labels :t1])))
       (is (= @transaction-id (get-in span-details [:transaction :id])))
-      (is (= 1 (get-in tx-details [:transaction :span_count :started]))))))
+      (is (= 1 (get-in tx-details [:transaction :span_count :started])))
+      (is (= "failure" (get-in span-details [:event :outcome]))))))
 
 (deftest with-apm-span-no-activation-test
   (apm/with-apm-transaction [tx]

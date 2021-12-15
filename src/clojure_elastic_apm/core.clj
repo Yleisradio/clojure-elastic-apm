@@ -1,5 +1,5 @@
 (ns clojure-elastic-apm.core
-  (:import [co.elastic.apm.api ElasticApm Transaction Span HeaderExtractor]))
+  (:import [co.elastic.apm.api ElasticApm Transaction Span HeaderExtractor Outcome]))
 
 (defn current-apm-transaction []
   (ElasticApm/currentTransaction))
@@ -18,6 +18,27 @@
 
 (defn set-name [^Span span-or-tx name]
   (.setName span-or-tx name))
+
+(defn set-result [^Transaction tx ^String result]
+  (.setResult tx result))
+
+(def outcome-success Outcome/SUCCESS)
+
+(def outcome-failure Outcome/FAILURE)
+
+(def outcome-unknown Outcome/UNKNOWN)
+
+(defn set-outcome [^Span span-or-tx ^Outcome outcome]
+  (.setOutcome span-or-tx outcome))
+
+(defn set-outcome-success [^Span span-or-tx]
+  (set-outcome span-or-tx outcome-success))
+
+(defn set-outcome-failure [^Span span-or-tx]
+  (set-outcome span-or-tx outcome-failure))
+
+(defn set-outcome-unknown [^Span span-or-tx]
+  (set-outcome span-or-tx outcome-unknown))
 
 (defn ^HeaderExtractor trace-extractor [traceparent]
   (reify HeaderExtractor
