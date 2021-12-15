@@ -129,6 +129,39 @@ You can also manually report exceptions that you don't wish to propagate further
 A function specifically designed for doing this, `clojure-elastic-apm.core/catch-error-to-apm` is included, which takes a thunk function, attempts 
 to evaluate it, and captures the exception if one occurs.
 
+### Set the result of a transaction
+
+You can set the [result](https://www.elastic.co/guide/en/apm/agent/java/master/public-api.html#api-transaction-set-result)
+of a transaction by calling `apm/set-result`, which takes a custom string that is visible in your trace samples.
+
+```
+(with-apm-transaction [tx {:name "BackgroundJob"}]
+  (try
+    (do-something)
+    (set-result tx "success")
+    (catch PSQLException e
+      (set-result tx "database-error"))
+    (catch Throwable t
+      (set-result tx "unexpected-error"))))
+```
+
+### Set the outcome of a transaction or a span
+
+You can set the [outcome](https://www.elastic.co/guide/en/apm/agent/java/master/public-api.html#api-transaction-set-outcome)
+of a transaction or a span by calling `apm/set-outcome`. There are 3 available outcomes, `apm/outcome-success`,
+`apm/outcome-failure` and `apm/outcome-unknown`, out of which `apm/outcome-success` and `apm/outcome-failure` determine
+the error rate displayed in APM.
+
+```
+(with-apm-transaction [tx {:name "BackgroundJob"}]
+  (try
+    (do-something)
+    (set-outcome tx apm/outcome-success)
+    (catch Exception e
+      (set-outcome tx apm/outcome-failure))))
+```
+
+You can also use the wrappers `apm/set-outcome-success`, `apm/set-outcome-failure` and `apm/set-outcome-unknown` instead.
 
 ### Adding labels
 
