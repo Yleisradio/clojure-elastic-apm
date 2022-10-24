@@ -40,6 +40,20 @@
       (is (= "GET /foo/bar" (get-in tx-details [:transaction :name])))
       (is (nil? (:parent tx-details))))))
 
+(deftest reitit-ring-tx-name-test
+  (let [transaction-id (atom nil)
+        request {:request-method :get, :uri "/foo/123"
+                 :reitit.core/match {:template "/foo/{id}"
+                                     :path     "/foo/123"}}
+        response {:status 200 :body "Ok."}
+        handler (fn [request]
+                  (reset! transaction-id (.getId (:clojure-elastic-apm/transaction request)))
+                  response)
+        wrapped-handler (apm-ring/wrap-apm-transaction handler)]
+    (is (= (wrapped-handler request) response))
+    (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
+      (is (= "GET /foo/{id}" (get-in tx-details [:transaction :name]))))))
+
 (deftest wrap-apm-remote-transaction-test
   (let [transaction-id (atom nil)
         parent-id "3574dfeefa12d57e"

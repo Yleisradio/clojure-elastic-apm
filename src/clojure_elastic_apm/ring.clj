@@ -20,8 +20,11 @@
           (clojure.string/join "/" matches)
           matched?)))))
 
-(defn request->tx-name [{:keys [request-method uri]}]
-  (str (.toUpperCase (name request-method)) " " uri))
+(defn request->tx-name [{:keys [request-method uri] :as request}]
+  (let [path (or
+               (-> request :reitit.core/match :template)
+               uri)]
+    (str (.toUpperCase (name request-method)) " " path)))
 
 (defn wrap-apm-transaction
   ([handler]

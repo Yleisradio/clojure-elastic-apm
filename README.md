@@ -270,6 +270,13 @@ from request and the transaction name derived from compojure route information:
 If you have a lot of routes or find this to be tedious, it might be worth it creating a custom routes macro that does this automatically. This is not included here because integration with compojure and other routing
 libraries is out of this project's scope.
 
+#### Reitit
+
+If you use [reitit.ring/ring-router](https://github.com/metosin/reitit/blob/master/doc/ring/ring.md#reititringring-router) configured with `:inject-match? true` (default),
+`apm-ring/wrap-apm-transaction` will use the injected `:reitit.core/match :template` value as the _path_ part in transaction name.
+
+For example, given a `reitit.ring/router` route `["/v1/foo/{id}"]`, a GET request to the URI `/v1/foo/124` would yield a transaction named `GET /v1/foo/{id}`.
+
 ## Development
 
 ### Running tests
