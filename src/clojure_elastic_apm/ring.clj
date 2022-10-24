@@ -20,10 +20,13 @@
           (clojure.string/join "/" matches)
           matched?)))))
 
+(defn request->tx-name [{:keys [request-method uri]}]
+  (str (.toUpperCase (name request-method)) " " uri))
+
 (defn wrap-apm-transaction
   ([handler]
-   (fn [{:keys [request-method uri headers] :as request}]
-     (let [tx-name (str (.toUpperCase (name request-method)) " " uri)
+   (fn [{:keys [headers] :as request}]
+     (let [tx-name (request->tx-name request)
            traceparent (get-in headers ["traceparent"])]
        (with-apm-transaction [tx {:name tx-name :type type-request :traceparent traceparent}]
          (let [{:keys [status] :as response} (handler (assoc request :clojure-elastic-apm/transaction tx))]
