@@ -26,7 +26,7 @@ So, add these to your project.clj dependencies:
 
 ```clojure
 [co.elastic.apm/apm-agent-api "AGENT_VERSION"]
-[clojure-elastic-apm "0.7.0"]
+[clojure-elastic-apm "0.8.0"]
 ```
 
 Note, in the agent configuration, the `elastic.apm.application_packages` option should be the top level namespace in your
@@ -43,7 +43,10 @@ Wrap any code block into APM transaction and track spans within the transaction:
   (do-something)
 
   (apm/with-apm-span [span {:name "Operation"}]
-    (do-something-in-a-span)))
+    (do-something-in-a-span))
+                          
+  (apm/with-apm-exit-span [span {:name "Call third party" :type "ext" :subtype "Third party service"}]
+    (call-third-party-service)))
 ```
 
 The options hash for `with-apm-transaction` accepts the following options:
@@ -63,8 +66,20 @@ The options hash for `with-apm-span` accepts the following options:
 * `:labels` - `{String any}` - map or sequence of label names and values to add to the transaction
 * `:tags` - `{String String}` - ~~map or sequence of label names and values to add to the transaction~~ Deprecated as of 0.5.0
 
-In both cases, all options are optional and the options hash can be omitted completely. However, it's good idea to at least provide the name. At the time of writing, the default transaction type
-is `"custom"`.
+In both cases, all options are optional and the options hash can be omitted completely. However, it's good idea to at least provide the name. At the time of writing, the default transaction type is `"custom"`.
+
+The `with-apm-exit-span` should be used when calling a third party service that should be shown as a dependency in analytics.
+The options hash for `with-apm-exit-span` accepts the following options:
+
+* `:name` - `String` - the span name
+* `:parent` - `Span` - the parent span, the new span will be created as child of this span (defaults to current active span or transaction)
+* `:activate?` - `Boolean` - whether to make the span active in the context of the executing thread (defaults to true). When activated, calling `apm/current-apm-span` returns this span. Optional.
+* `:type` - `String` - The general type of the new span. Though there are no naming restrictions for the general types, the following are standardized across all Elastic APM agents: `app`, `db`, `cache`, `template`, and `ext`. Defaults to `ext`.
+* `:subtype` - `String` - Set this as the third party service name. Defaults to `undefined subtype`.
+* `:action` - `String` - Describes the action eg. `query`.
+* `:labels` - `{String any}` - map or sequence of label names and values to add to the transaction
+
+All options are optional. However, it's a good idea to provide at least a name and a subtype.
 
 ### Manually starting, activating and ending transactions and spans
 
