@@ -65,6 +65,42 @@
       (is (= 1 (get-in tx-details [:transaction :span_count :started])))
       (is (= "failure" (get-in span-details [:event :outcome]))))))
 
+(deftest with-apm-exit-span-test
+  (let [span-id (atom nil)]
+    (apm/with-apm-transaction [tx]
+      (apm/set-name tx "TestWithSpans")
+      (is (= (.getId tx) (.getId (apm/current-apm-span))))
+      (apm/with-apm-exit-span [span {:name "TestExitSpan" :type "type1" :subtype "serviceX" :action "action1"}]
+        (reset! span-id (.getId span))
+        (Thread/sleep 100)
+        (apm/set-outcome-failure span)
+        (is (not= (.getId tx) (.getId (apm/current-apm-span))) "span did not activate in the with-apm-span block")
+        (is (= (.getId span) (.getId (apm/current-apm-span))) "span did not activate in the with-apm-span block")))
+    (is (= "" (.getId (apm/current-apm-span))) "span did not deactivate after the with-apm-span block")
+    (let [span-details (es-find-first-document (str "(processor.event:span%20AND%20span.id:" @span-id ")"))]
+      (is (= "TestExitSpan" (get-in span-details [:span :name])))
+      (is (= "type1" (get-in span-details [:span :type])))
+      (is (= "serviceX" (get-in span-details [:span :subtype])))
+      (is (= "action1" (get-in span-details [:span :action]))))))
+
+(deftest with-apm-exit-span-defaults-test
+  (let [span-id (atom nil)]
+    (apm/with-apm-transaction [tx]
+      (apm/set-name tx "TestWithSpans")
+      (is (= (.getId tx) (.getId (apm/current-apm-span))))
+      (apm/with-apm-exit-span [span {:name "TestExitSpan"}]
+        (reset! span-id (.getId span))
+        (Thread/sleep 100)
+        (apm/set-outcome-failure span)
+        (is (not= (.getId tx) (.getId (apm/current-apm-span))) "span did not activate in the with-apm-span block")
+        (is (= (.getId span) (.getId (apm/current-apm-span))) "span did not activate in the with-apm-span block")))
+    (is (= "" (.getId (apm/current-apm-span))) "span did not deactivate after the with-apm-span block")
+    (let [span-details (es-find-first-document (str "(processor.event:span%20AND%20span.id:" @span-id ")"))]
+      (is (= "TestExitSpan" (get-in span-details [:span :name])))
+      (is (= "ext" (get-in span-details [:span :type])))
+      (is (= "undefined" (get-in span-details [:span :subtype])))
+      (is (nil? (get-in span-details [:span :action]))))))
+
 (deftest with-apm-span-no-activation-test
   (apm/with-apm-transaction [tx]
     (apm/with-apm-span [span {:activate? false}]

@@ -74,7 +74,7 @@
      span-name :name
      labels :labels
      tags :tags}]
-   (let [span  (.startSpan (or parent (current-apm-span)))]
+   (let [span (.startSpan (or parent (current-apm-span)))]
      (when span-name
        (set-name span span-name))
      (doseq [[k v] labels]
@@ -82,6 +82,22 @@
      (doseq [[k v] tags]
        (set-label span k v))
      span)))
+
+(defn create-exit-span [{parent :parent
+                         span-name :name
+                         labels :labels
+                         type :type
+                         subtype :subtype
+                         action :action}]
+  (let [span (.startExitSpan (or parent (current-apm-span))
+                             (or type "ext")
+                             (or subtype "undefined subtype")
+                             action)]
+    (when span-name
+      (set-name span span-name))
+    (doseq [[k v] labels]
+      (set-label span k v))
+    span))
 
 (defn end [^Span span-or-tx]
   (.end span-or-tx))
@@ -110,11 +126,11 @@
          (end tx))))))
 
 (defn apm-span*
-  ([func]
-   (apm-span* func {}))
-  ([func opts]
+  ([create-span-fn func]
+   (apm-span* create-span-fn func {}))
+  ([create-span-fn func opts]
    (let [activate? (or (nil? (:activate? opts)) (:activate? opts))
-         span (create-span opts)]
+         span (create-span-fn opts)]
      (try
        (if activate?
          (with-open [_ (activate span)]
@@ -131,7 +147,13 @@
                      ~(second binding)))
 
 (defmacro with-apm-span [binding & body]
-  `(apm-span* (^{:once true} fn* [~(first binding)] ~@body)
+  `(apm-span* create-span
+              (^{:once true} fn* [~(first binding)] ~@body)
+              ~(second binding)))
+
+(defmacro with-apm-exit-span [binding & body]
+  `(apm-span* create-exit-span
+              (^{:once true} fn* [~(first binding)] ~@body)
               ~(second binding)))
 
 (defn catch-error-to-apm [thunk]
