@@ -1,16 +1,15 @@
 (ns clojure-elastic-apm.ring
   (:require
-   [clojure-elastic-apm.core :refer [type-request with-apm-transaction]]
-   [clojure.string :as string]))
+   [clojure-elastic-apm.core :refer [type-request with-apm-transaction]]))
 
 (defn match-uri [pattern uri]
-  (let [pattern-segs (string/split pattern #"/")
-        uri-segs (string/split uri #"/")
+  (let [pattern-segs (clojure.string/split pattern #"/")
+        uri-segs (clojure.string/split uri #"/")
         matcher (fn [p u]
                   (cond
                     (= p "*") u
-                    (p "_") "_"
-                    (p u) u
+                    (= p "_") "_"
+                    (= p u) u
                     :else false))]
     (if (> (count pattern-segs)
            (count uri-segs))
@@ -18,7 +17,7 @@
       (let [matches (map matcher pattern-segs uri-segs)
             matched? (reduce #(and %1 %2) matches)]
         (if matched?
-          (string/join "/" matches)
+          (clojure.string/join "/" matches)
           matched?)))))
 
 (defn match-patterns [patterns uri]
