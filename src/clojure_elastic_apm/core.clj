@@ -142,9 +142,7 @@
        (finally
          (end span))))))
 
-(defmacro with-apm-transaction
-  {:clj-kondo/lint-as 'clojure.core/let}
-  [binding & body]
+(defmacro with-apm-transaction [binding & body]
   `(apm-transaction* (^{:once true} fn* [~(first binding)] ~@body)
                      ~(second binding)))
 
