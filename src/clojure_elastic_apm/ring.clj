@@ -67,8 +67,8 @@
         (if matched
           (with-apm-transaction [tx {:name tx-name :type type-request :traceparent traceparent}]
             (let [req (assoc request :clojure-elastic-apm/transaction tx)]
-              (handler req (fn [response]
-                             (when (:status response)
-                               (.setResult tx (str "HTTP " (:status response))))
+              (handler req (fn [{:keys [status] :as response}]
+                             (when status
+                               (.setResult tx (str "HTTP " status)))
                              (respond response)) raise)))
           (handler respond raise)))))))
