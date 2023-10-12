@@ -98,7 +98,7 @@
     (let [span-details (es-find-first-document (str "(processor.event:span%20AND%20span.id:" @span-id ")"))]
       (is (= "TestExitSpan" (get-in span-details [:span :name])))
       (is (= "ext" (get-in span-details [:span :type])))
-      (is (= "undefined" (get-in span-details [:span :subtype])))
+      (is (= "undefined subtype" (get-in span-details [:span :subtype])))
       (is (nil? (get-in span-details [:span :action]))))))
 
 (deftest with-apm-span-no-activation-test
