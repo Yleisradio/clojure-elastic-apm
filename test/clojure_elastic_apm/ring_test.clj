@@ -41,19 +41,22 @@
       (is (nil? (:parent tx-details))))))
 
 (deftest wrap-apm-transaction-with-pattern-async-test
-  (let [transaction-id (atom nil)
+  (let [transaction-id (promise)
         request {:request-method :get, :uri "/foo/bar"}
         response {:status 200 :body "Ok."}
+        response-promise (promise)
         respond (fn [r]
-                  (is (= (:status r) 200))
-                  r)
+                  (deliver response-promise r))
         handler (fn [request respond _]
-                  (is (not= "" (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
-                  (is (= (.getId (:clojure-elastic-apm/transaction request)) (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
-                  (reset! transaction-id (.getId (:clojure-elastic-apm/transaction request)))
-                  (respond response))
+                  (future
+                    (with-open [_ (apm/activate (:clojure-elastic-apm/transaction request))]
+                      (is (not= "" (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
+                      (is (= (.getId (:clojure-elastic-apm/transaction request)) (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
+                      (deliver transaction-id (.getId (:clojure-elastic-apm/transaction request)))
+                      (respond response))))
         wrapped-handler (apm-ring/wrap-apm-transaction handler ["/*/*"])]
-    (is (= (wrapped-handler request respond nil) response))
+    (wrapped-handler request respond nil)
+    (is (= response (deref response-promise 1000 ::timeout)))
     (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
       (is (= apm/type-request (get-in tx-details [:transaction :type])))
       (is (= "HTTP 200" (get-in tx-details [:transaction :result])))
@@ -61,24 +64,45 @@
       (is (nil? (:parent tx-details))))))
 
 (deftest wrap-apm-transaction-async-test
-  (let [transaction-id (atom nil)
+  (let [transaction-id (promise)
+        response-promise (promise)
         request {:request-method :get, :uri "/foo/bar"}
         response {:status 200 :body "Ok."}
         respond (fn [r]
-                  (is (= (:status r) 200))
-                  r)
+                  (deliver response-promise r))
         handler (fn [request respond _]
-                  (is (not= "" (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
-                  (is (= (.getId (:clojure-elastic-apm/transaction request)) (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
-                  (reset! transaction-id (.getId (:clojure-elastic-apm/transaction request)))
-                  (respond response))
+                  (future
+                    (with-open [_ (apm/activate (:clojure-elastic-apm/transaction request))]
+                      (is (not= "" (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
+                      (is (= (.getId (:clojure-elastic-apm/transaction request)) (.getId (apm/current-apm-transaction))) "transaction should've been activated for the duration of the request")
+                      (deliver transaction-id (.getId (:clojure-elastic-apm/transaction request)))
+                      (respond response))))
         wrapped-handler (apm-ring/wrap-apm-transaction handler)]
-    (is (= (wrapped-handler request respond nil) response))
+    (wrapped-handler request respond nil)
+    (is (= response (deref response-promise 1000 ::timeout)))
+    (is (not= "" @transaction-id))
     (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
       (is (= apm/type-request (get-in tx-details [:transaction :type])))
       (is (= "HTTP 200" (get-in tx-details [:transaction :result])))
       (is (= "GET /foo/bar" (get-in tx-details [:transaction :name])))
       (is (nil? (:parent tx-details))))))
+
+(deftest wrap-apm-transaction-async-exception-test
+  (let [transaction-id (promise)
+        request {:request-method :get, :uri "/foo/bar"}
+        raise (fn [_])
+        handler (fn [request _ raise]
+                  (future
+                    (with-open [_ (apm/activate (:clojure-elastic-apm/transaction request))]
+                      (deliver transaction-id (.getId (:clojure-elastic-apm/transaction request)))
+                      (raise (ex-info "Error in handler" {})))))
+        wrapped-handler (apm-ring/wrap-apm-transaction handler)]
+    (wrapped-handler request nil raise)
+    (is (not= "" @transaction-id))
+    (let [tx-details (es-find-first-document (str "(processor.event:error%20AND%20transaction.id:" @transaction-id ")"))]
+      (is (= apm/type-request (get-in tx-details [:transaction :type])))
+      (is (= "clojure.lang.ExceptionInfo" (get-in tx-details [:error :exception 0 :type])))
+      (is (= "Error in handler" (get-in tx-details [:error :exception 0 :message]))))))
 
 (deftest wrap-apm-remote-transaction-test
   (let [transaction-id (atom nil)
