@@ -39,7 +39,7 @@
    (fn
      ([{:keys [request-method uri headers] :as request}]
       (let [matched (match-patterns patterns uri)
-            tx-name (str (.toUpperCase (name request-method)) " " matched)
+            tx-name (str (string/upper-case (name request-method)) " " matched)
             traceparent (get-in headers ["traceparent"])]
         (if matched
           (with-apm-transaction [^Transaction tx {:name tx-name :type type-request :traceparent traceparent}]
@@ -50,7 +50,7 @@
           (handler request))))
      ([{:keys [request-method uri headers] :as request} respond raise]
       (let [matched (match-patterns patterns uri)
-            tx-name (str (.toUpperCase (name request-method)) " " matched)
+            tx-name (str (string/upper-case (name request-method)) " " matched)
             traceparent (get-in headers ["traceparent"])]
         (if matched
           (let [tx (apm/start-transaction {:name tx-name :type type-request :traceparent traceparent})
