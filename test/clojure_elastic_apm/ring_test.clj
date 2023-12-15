@@ -6,22 +6,22 @@
 
 (deftest match-uri-test
   (testing "* matches and returns value"
-    (= (apm-ring/match-uri "/*/*" "/v1/foo") "/v1/foo")
-    (= (apm-ring/match-uri "/*/*/*" "/v1/foo/bar") "/v1/foo/bar"))
+    (is (= (apm-ring/match-uri "/*/*" "/v1/foo") "/v1/foo"))
+    (is (= (apm-ring/match-uri "/*/*/*" "/v1/foo/bar") "/v1/foo/bar")))
   (testing "_ matches but ignores value"
-    (= (apm-ring/match-uri "/*/_" "/v1/foo") "/v1/_")
-    (= (apm-ring/match-uri "/_/foo" "/v1/foo") "/_/foo"))
+    (is (= (apm-ring/match-uri "/*/_" "/v1/foo") "/v1/_"))
+    (is (= (apm-ring/match-uri "/_/foo" "/v1/foo") "/_/foo")))
   (testing "exact string matches and returns value"
-    (= (apm-ring/match-uri "/v1/*" "/v1/foo") "/v1/foo")
-    (= (apm-ring/match-uri "/*/foo" "/v2/foo") "/v2/foo")
-    (= (apm-ring/match-uri "/v1/*" "/v2/bar") false))
+    (is (= (apm-ring/match-uri "/v1/*" "/v1/foo") "/v1/foo"))
+    (is (= (apm-ring/match-uri "/*/foo" "/v2/foo") "/v2/foo"))
+    (is (= (apm-ring/match-uri "/v1/*" "/v2/bar") false)))
   (testing "matches are eager, and will match a longer URL"
-    (= (apm-ring/match-uri "/*" "/v1/foo/bar") "/v1"))
+    (is (= (apm-ring/match-uri "/*" "/v1/foo/bar") "/v1")))
   (testing "but a shorter URL won't match a longer pattern"
-    (= (apm-ring/match-uri "/*/*/*/*" "/v1/foo") false))
+    (is (= (apm-ring/match-uri "/*/*/*/*" "/v1/foo") false)))
   (testing "trailing slashes don't affect matches"
-    (= (apm-ring/match-uri "/*/*/" "/v1/foo") "/v1/foo")
-    (= (apm-ring/match-uri "/*/*" "/v1/foo/") "/v1/foo")))
+    (is (= (apm-ring/match-uri "/*/*/" "/v1/foo") "/v1/foo"))
+    (is (= (apm-ring/match-uri "/*/*" "/v1/foo/") "/v1/foo"))))
 
 (deftest wrap-apm-transaction-test
   (let [transaction-id (atom nil)
