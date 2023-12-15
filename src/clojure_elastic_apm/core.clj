@@ -40,7 +40,7 @@
 (defn set-outcome-unknown [^Span span-or-tx]
   (set-outcome span-or-tx outcome-unknown))
 
-(defn ^HeaderExtractor trace-extractor [traceparent]
+(defn trace-extractor ^HeaderExtractor [traceparent]
   (reify HeaderExtractor
     (getFirstHeader [_ _] traceparent)))
 
