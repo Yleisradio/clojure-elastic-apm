@@ -116,3 +116,46 @@
     (let [error-details (es-find-first-document (str "(processor.event:error%20AND%20transaction.id:" @transaction-id ")"))]
       (is (= "java.lang.RuntimeException" (get-in error-details [:error :exception 0 :type])))
       (is (= "Simulated error" (get-in error-details [:error :exception 0 :message]))))))
+
+(apm/defnspan f1
+  [_]
+  (apm/current-apm-span))
+
+(deftest defnspan-default-test
+  (apm/with-apm-transaction [tx]
+    (let [span (f1 :a)
+          doc (es-find-first-document (str "(processor.event:span%20AND%20span.id:" (.getId span) ")"))]
+      (is (= {:span {:name "clojure-elastic-apm.core-test/f1" :type "custom"}}
+             (-> doc
+                 (select-keys [:span])
+                 (update :span (fn [span] (select-keys span [:name :type])))))))))
+
+(apm/defnspan f2
+  {:apm/name "Custom name"
+   :apm/type "db"
+   :apm/tags {"t1" "1"}}
+  [_ _]
+  (apm/current-apm-span))
+
+(deftest defnspan-meta-test
+  (apm/with-apm-transaction [tx]
+    (let [span (f2 :a :b)
+          doc (es-find-first-document (str "(processor.event:span%20AND%20span.id:" (.getId span) ")"))]
+      (is (= {:span {:name "Custom name" :type "db"}
+              :labels {:t1 "1"}}
+             (-> doc
+                 (select-keys [:span :labels])
+                 (update :span (fn [span] (select-keys span [:name :type])))))))))
+
+(apm/defnspan f3
+  [_ _ _ _ _]
+  (apm/current-apm-span))
+
+(deftest defnspan-many-args-test
+  (apm/with-apm-transaction [tx]
+    (let [span (f3 :a :b :c :d :e)
+          doc (es-find-first-document (str "(processor.event:span%20AND%20span.id:" (.getId span) ")"))]
+      (is (= {:span {:name "clojure-elastic-apm.core-test/f3" :type "custom"}}
+             (-> doc
+                 (select-keys [:span])
+                 (update :span (fn [span] (select-keys span [:name :type])))))))))

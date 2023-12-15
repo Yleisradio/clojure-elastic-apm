@@ -170,3 +170,31 @@
       (thunk)
       (catch Exception e
         (capture-exception tx e)))))
+
+(defmacro defnspan
+  "Like defn, but wraps the function body in an APM span.
+
+  All fn meta in the \"apm\" namespace become with-apm-span options."
+  {:clj-kondo/lint-as 'clojure.core/defn}
+  [fname & params]
+  `(let [v# (defn ~fname ~@params)
+         m# (meta v#)
+         fqn# (str *ns* "/" '~fname)
+         ;; Use fully-qualified function name as span name by default.
+         opts# (into {:name fqn#}
+                 ;; Use :apm/* meta as span opts.
+                 (comp
+                   (filter (fn [[k# _v#]] (= (namespace k#) "apm")))
+                   (map (fn [[k# v#]] [(-> k# name keyword) v#])))
+                 m#)]
+     (alter-var-root v#
+       (fn [f#]
+         (fn ~fname
+           ;; Write out arities by hand for performance.
+           ([a#] (with-apm-span [span# opts#] (f# a#)))
+           ([a# b#] (with-apm-span [span# opts#] (f# a# b#)))
+           ([a# b# c#] (with-apm-span [span# opts#] (f# a# b# c#)))
+           ([a# b# c# d#] (with-apm-span [span# opts#] (f# a# b# c# d#)))
+           ([a# b# c# d# & more#] (with-apm-span [span# opts#] (apply f# a# b# c# d# more#))))))
+     ;; Return the var.
+     v#))
