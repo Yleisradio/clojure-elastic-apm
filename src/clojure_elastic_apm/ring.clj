@@ -40,7 +40,7 @@
      ([{:keys [request-method uri headers] :as request}]
       (let [matched (match-patterns patterns uri)
             tx-name (str (string/upper-case (name request-method)) " " matched)
-            traceparent (get-in headers ["traceparent"])]
+            traceparent (get headers "traceparent")]
         (if matched
           (with-apm-transaction [^Transaction tx {:name tx-name :type type-request :traceparent traceparent}]
             (let [{:keys [status] :as response} (handler (assoc request :clojure-elastic-apm/transaction tx))]
@@ -51,7 +51,7 @@
      ([{:keys [request-method uri headers] :as request} respond raise]
       (let [matched (match-patterns patterns uri)
             tx-name (str (string/upper-case (name request-method)) " " matched)
-            traceparent (get-in headers ["traceparent"])]
+            traceparent (get headers "traceparent")]
         (if matched
           (let [tx (apm/start-transaction {:name tx-name :type type-request :traceparent traceparent})
                 req (assoc request :clojure-elastic-apm/transaction tx)]
