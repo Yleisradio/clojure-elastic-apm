@@ -14,8 +14,8 @@
 
 (defn set-label [^Span span-or-tx k v]
   (cond
-    (instance? Number v) (.setLabel span-or-tx (name k) ^Number v)
-    (instance? Boolean v) (.setLabel span-or-tx (name k) ^boolean v)
+    (number? v) (.setLabel span-or-tx (name k) ^Number v)
+    (boolean? v) (.setLabel span-or-tx (name k) ^boolean v)
     :else (.setLabel span-or-tx (name k) (str v))))
 
 (defn set-name [^Span span-or-tx name]
