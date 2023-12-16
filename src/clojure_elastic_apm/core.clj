@@ -76,11 +76,14 @@
   ([{parent :parent
      span-name :name
      labels :labels
-     tags :tags}]
+     tags :tags
+     span-type :type}]
    (let [parent-span (or parent (current-apm-span))
          child-span (.startSpan ^Span parent-span)]
      (when span-name
        (set-name child-span span-name))
+     (when (string? span-type)
+       (.setType child-span span-type))
      (doseq [[k v] labels]
        (set-label child-span k v))
      (doseq [[k v] tags]

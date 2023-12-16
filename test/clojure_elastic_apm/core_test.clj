@@ -49,7 +49,7 @@
       (reset! transaction-id (.getId tx))
       (apm/set-name tx "TestWithSpans")
       (is (= (.getId tx) (.getId (apm/current-apm-span))))
-      (apm/with-apm-span [span {:name "TestSpan" :tags {"t1" "1"}}]
+      (apm/with-apm-span [span {:name "TestSpan" :tags {"t1" "1"} :type "type1"}]
         (reset! span-id (.getId span))
         (Thread/sleep 100)
         (apm/set-label span "t1" "1")
@@ -61,6 +61,7 @@
           span-details (es-find-first-document (str "(processor.event:span%20AND%20span.id:" @span-id ")"))]
       (is (= "TestSpan" (get-in span-details [:span :name])))
       (is (= "1" (get-in span-details [:labels :t1])))
+      (is (= "type1" (get-in span-details [:span :type])))
       (is (= @transaction-id (get-in span-details [:transaction :id])))
       (is (= 1 (get-in tx-details [:transaction :span_count :started])))
       (is (= "failure" (get-in span-details [:event :outcome]))))))
