@@ -1,6 +1,9 @@
 (ns clojure-elastic-apm.ring
   (:require
-   [clojure-elastic-apm.core :as apm :refer [type-request with-apm-transaction]]))
+   [clojure-elastic-apm.core :as apm :refer [type-request with-apm-transaction]])
+  (:import [co.elastic.apm.api Transaction]))
+
+(set! *warn-on-reflection* true)
 
 (defn match-uri [pattern uri]
   (let [pattern-segs (clojure.string/split pattern #"/")
@@ -38,7 +41,7 @@
             tx-name (str (.toUpperCase (name request-method)) " " matched)
             traceparent (get-in headers ["traceparent"])]
         (if matched
-          (with-apm-transaction [tx {:name tx-name :type type-request :traceparent traceparent}]
+          (with-apm-transaction [^Transaction tx {:name tx-name :type type-request :traceparent traceparent}]
             (let [{:keys [status] :as response} (handler (assoc request :clojure-elastic-apm/transaction tx))]
               (when status
                 (.setResult tx (str "HTTP " status)))
