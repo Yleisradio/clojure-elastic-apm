@@ -1,0 +1,35 @@
+name: Test
+
+on:
+  push:
+    branches: [ master ]
+    tags-ignore: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: docker-compose up --detach
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'adopt'
+          java-version: '21'
+
+      - uses: DeLaGuardo/setup-clojure@12.1
+        with:
+          lein: 'latest'
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.m2/repository
+          key: deps-${{ hashFiles('project.clj') }}
+          restore-keys: deps-
+
+      - run: lein test
