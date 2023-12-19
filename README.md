@@ -311,3 +311,11 @@ The only way to access all the details is to fetch the transaction info from Ela
 Also note that the ElasticSearch docker requires a minimum of 4 gigabytes of memory, so ensure that you have allocated 
 enough memory for your docker containers: from Docker Dashboard Preferences -> Resources -> Advanced -> Memory.
 
+### Release
+
+- Update version in project.clj.
+- Run `lein deploy clojars`
+   - If you need to login to Clojars the username is `yleisradio`. Password is known at least by Sitouttamistiimi.
+   - Publish username is `yleisradio` and passwod is a token. This token is known at least by Sitouttamistiimi.
+- Update release notes in GitHub.
+
