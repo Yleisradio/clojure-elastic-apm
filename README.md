@@ -63,6 +63,7 @@ The options hash for `with-apm-span` accepts the following options:
 * `:name` - `String` - the span name
 * `:parent` - `Span` - the parent span, the new span will be created as child of this span (defaults to current active span or transaction)
 * `:activate?` - `Boolean` - whether to make the span active in the context of the executing thread (defaults to true). When activated, calling `apm/current-apm-span` returns this span.
+* `:type` - `String` - the span type
 * `:labels` - `{String any}` - map or sequence of label names and values to add to the transaction
 * `:tags` - `{String String}` - ~~map or sequence of label names and values to add to the transaction~~ Deprecated as of 0.5.0
 

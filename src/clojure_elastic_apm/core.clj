@@ -1,6 +1,8 @@
 (ns clojure-elastic-apm.core
   (:import [co.elastic.apm.api ElasticApm Transaction Span HeaderExtractor Outcome]))
 
+(set! *warn-on-reflection* true)
+
 (defn current-apm-transaction []
   (ElasticApm/currentTransaction))
 
@@ -12,8 +14,8 @@
 
 (defn set-label [^Span span-or-tx k v]
   (cond
-    (instance? Number v) (.setLabel span-or-tx (name k) ^Number v)
-    (instance? Boolean v) (.setLabel span-or-tx (name k) ^boolean v)
+    (number? v) (.setLabel span-or-tx (name k) ^Number v)
+    (boolean? v) (.setLabel span-or-tx (name k) ^boolean v)
     :else (.setLabel span-or-tx (name k) (str v))))
 
 (defn set-name [^Span span-or-tx name]
@@ -40,7 +42,7 @@
 (defn set-outcome-unknown [^Span span-or-tx]
   (set-outcome span-or-tx outcome-unknown))
 
-(defn ^HeaderExtractor trace-extractor [traceparent]
+(defn trace-extractor ^HeaderExtractor [traceparent]
   (reify HeaderExtractor
     (getFirstHeader [_ _] traceparent)))
 
@@ -49,8 +51,9 @@
 (defn start-transaction
   ([]
    (start-transaction {}))
-  ([{tx-name :name
-     tx-type :type
+  (^Transaction
+   [{tx-name :name
+     ^String tx-type :type
      tags :tags
      labels :labels
      traceparent :traceparent}]
@@ -73,15 +76,19 @@
   ([{parent :parent
      span-name :name
      labels :labels
-     tags :tags}]
-   (let [span (.startSpan (or parent (current-apm-span)))]
+     tags :tags
+     span-type :type}]
+   (let [parent-span (or parent (current-apm-span))
+         child-span (.startSpan ^Span parent-span)]
      (when span-name
-       (set-name span span-name))
+       (set-name child-span span-name))
+     (when (string? span-type)
+       (.setType child-span span-type))
      (doseq [[k v] labels]
-       (set-label span k v))
+       (set-label child-span k v))
      (doseq [[k v] tags]
-       (set-label span k v))
-     span)))
+       (set-label child-span k v))
+     child-span)))
 
 (defn create-exit-span [{parent :parent
                          span-name :name
@@ -89,20 +96,21 @@
                          type :type
                          subtype :subtype
                          action :action}]
-  (let [span (.startExitSpan (or parent (current-apm-span))
-                             (or type "ext")
-                             (or subtype "undefined subtype")
-                             action)]
+  (let [parent-span (or parent (current-apm-span))
+        child-span (.startExitSpan ^Span parent-span
+                                   (or type "ext")
+                                   (or subtype "undefined subtype")
+                                   action)]
     (when span-name
-      (set-name span span-name))
+      (set-name child-span span-name))
     (doseq [[k v] labels]
-      (set-label span k v))
-    span))
+      (set-label child-span k v))
+    child-span))
 
 (defn end [^Span span-or-tx]
   (.end span-or-tx))
 
-(defn activate [^Span span-or-tx]
+(defn activate ^java.lang.AutoCloseable [^Span span-or-tx]
   (.activate span-or-tx))
 
 (defn capture-exception [^Span span-or-tx ^Exception e]
