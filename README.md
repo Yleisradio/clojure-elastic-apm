@@ -286,6 +286,53 @@ from request and the transaction name derived from compojure route information:
 If you have a lot of routes or find this to be tedious, it might be worth it creating a custom routes macro that does this automatically. This is not included here because integration with compojure and other routing
 libraries is out of this project's scope.
 
+#### Defining span-emitting functions
+
+To define a function whose body is wrapped in a [span](https://www.elastic.co/guide/en/apm/guide/current/data-model-spans.html), use `clojure-elastic-apm.core/defnspan`. `defnspan` is like `clojure.core/defn`, except that it wraps the function body with `clojure-elastic-apm.core/with-apm-span`.
+
+By default, `defnspan` uses the fully-qualified name of the function as the span name.
+
+Thus, for example, this:
+
+```clojure
+(ns my.ns
+  (:require [clojure-elastic-apm.core :refer [defnspan]]))
+
+(defnspan my-sum
+  [a b]
+  (+ a b))
+```
+
+Expands (roughly) to this:
+
+```clojure
+(defn my-sum
+  [a b]
+  (apm/with-apm-span [_ {:name "my.ns/my-sum"}]
+    (+ a b)))
+```
+
+To pass options to `with-apm-span`, use var metadata. For example, this:
+
+```clojure
+(defnspan my-sum
+  ;; Every metadata entry in the "apm" namespace become options to
+  ;; with-apm-span.
+  {:apm/name "Add number a to number b"
+   :apm/type "algo"}
+  [a b]
+  (+ a b))
+```
+
+Expands (roughly) to this:
+
+```clojure
+(defn my-sum
+  [a b]
+  (apm/with-apm-span [_ {:name "Add number a to number b" :type "algo"}]
+    (+ a b)))
+```
+
 ## Development
 
 ### Running tests
