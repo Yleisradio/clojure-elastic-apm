@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.11.1"]]
-  :profiles {:dev {:jvm-opts ["-javaagent:lib/elastic-apm-agent-1.38.0.jar"
+  :profiles {:dev {:jvm-opts ["-javaagent:lib/elastic-apm-agent-1.52.1.jar"
                               "-Delastic.apm.service_name=test-service"
                               "-Delastic.apm.application_packages=clojure-elastic-apm"
                               "-Delastic.apm.server_urls=http://localhost:8200"
