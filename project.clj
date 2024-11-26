@@ -9,6 +9,6 @@
                               "-Delastic.apm.application_packages=clojure-elastic-apm"
                               "-Delastic.apm.server_urls=http://localhost:8200"
                               "-Delastic.apm.metrics_interval=1s"]
-                   :dependencies [[clj-http "3.12.3"]
-                                  [cheshire "5.11.0"]]}
-             :provided {:dependencies [[co.elastic.apm/apm-agent-api "1.38.0"]]}})
+                   :dependencies [[clj-http "3.13.0"]
+                                  [cheshire "5.13.0"]]}
+             :provided {:dependencies [[co.elastic.apm/apm-agent-api "1.52.1"]]}})
