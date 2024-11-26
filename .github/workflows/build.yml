@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: docker-compose up --detach
+      - run: docker compose up --detach
 
       - uses: actions/setup-java@v4
         with:
