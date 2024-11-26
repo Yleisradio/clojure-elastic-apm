@@ -31,8 +31,8 @@
     (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
       (is (= "TestTransaction" (get-in tx-details [:transaction :name])))
       (is (= "1" (get-in tx-details [:labels :t1])))
-      (is (= 2 (get-in tx-details [:labels :t2])))
-      (is (true? (get-in tx-details [:labels :t3])))
+      (is (= "2" (get-in tx-details [:labels :t2])))
+      (is (= "true" (get-in tx-details [:labels :t3])))
       (is (= "Label 4" (get-in tx-details [:labels :t4])))
       (is (= "test-result" (get-in tx-details [:transaction :result])))
       (is (= "success" (get-in tx-details [:event :outcome]))))))
@@ -159,3 +159,91 @@
              (-> doc
                  (select-keys [:span])
                  (update :span (fn [span] (select-keys span [:name :type])))))))))
+
+(defn trace-context
+  "Given an APM span, return the trace context[1] HTTP headers of the span.
+
+  [1]: https://www.w3.org/TR/trace-context/"
+  [span]
+  (let [headers (transient {})]
+    (.injectTraceHeaders span
+      (reify co.elastic.apm.api.HeaderInjector
+        (addHeader [_ name value]
+          (assoc! headers name value))))
+    (persistent! headers)))
+
+(def ^:private traceparent-regex
+  "https://www.w3.org/TR/trace-context/#traceparent-header"
+  #"^([0-9a-fA-F]{2})-([0-9a-fA-F]{32})-([0-9a-fA-F]{16})-([0-9a-fA-F]{2})$")
+
+(def ^:private tracestate-regex
+  "https://www.w3.org/TR/trace-context/#tracestate-header"
+  #"^[!-~]+(,[!-~]+=[!-~]+)*$")
+
+(defn parse-traceparent-header
+  "Given a traceparent header, parse the header value into its constituents."
+  [traceparent]
+  (zipmap [:version :trace-id :parent-id :trace-flags]
+    (rest (re-matches traceparent-regex traceparent))))
+
+(defn fields-except
+  "Given a traceparent header, return a map of its constituents, except fields."
+  [traceparent & fields]
+  (-> (parse-traceparent-header traceparent)
+      (apply dissoc fields)))
+
+(deftest trace-context-test
+  (testing "no opts"
+    (let [tx (apm/start-transaction)
+          {:strs [traceparent tracestate]} (trace-context tx)]
+      ;; APM adds new trace context headers.
+      (is (re-matches traceparent-regex traceparent))
+      (is (re-matches tracestate-regex tracestate))))
+
+  (testing ":headers -- empty & nil"
+    (let [tx (apm/start-transaction {:headers {}})
+          {:strs [traceparent tracestate]} (trace-context tx)]
+      (is (re-matches traceparent-regex traceparent))
+      (is (re-matches tracestate-regex tracestate)))
+
+    (let [tx (apm/start-transaction {:headers nil})
+          {:strs [traceparent tracestate]} (trace-context tx)]
+      (is (re-matches traceparent-regex traceparent))
+      (is (re-matches tracestate-regex tracestate))))
+
+  (testing ":headers -- traceparent only"
+    (let [inbound-traceparent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+          tx (apm/start-transaction {:headers {"traceparent" inbound-traceparent}})
+          {:strs [traceparent]} (trace-context tx)]
+      (is (= (fields-except inbound-traceparent :parent-id)
+             (fields-except traceparent :parent-id)))))
+
+  (testing ":headers -- traceparent & tracestate"
+    (let [inbound-traceparent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+          inbound-tracestate "es=s:0.25"
+          tx (apm/start-transaction {:headers {"traceparent" inbound-traceparent
+                                               "tracestate" inbound-tracestate}})
+          {:strs [traceparent tracestate]} (trace-context tx)]
+      (is (= (fields-except inbound-traceparent :parent-id)
+             (fields-except traceparent :parent-id)))
+      (is (= inbound-tracestate tracestate))))
+
+  (testing ":headers -- multi-value tracestate"
+    (let [inbound-traceparent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+          inbound-tracestate "es=s:0.5,rojo=00f067aa0ba902b7"
+          tx (apm/start-transaction {:headers {"traceparent" inbound-traceparent
+                                               "tracestate" inbound-tracestate}})
+          {:strs [tracestate]} (trace-context tx)]
+      (is (= inbound-tracestate tracestate))))
+
+  (testing ":traceparent (backwards compatibility only, do not use)"
+    (let [inbound-traceparent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+          tx (apm/start-transaction {:traceparent inbound-traceparent})
+          {:strs [traceparent tracestate]} (trace-context tx)]
+      (is (= (fields-except inbound-traceparent :parent-id)
+             (fields-except traceparent :parent-id)))
+
+      ;; Using the :traceparent option incorrectly sets the value of every
+      ;; trace context header -- including tracestate -- to the value of the
+      ;; traceparent header. Do not use it.
+      (is (= inbound-traceparent tracestate)))))
