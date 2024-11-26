@@ -26,7 +26,7 @@ So, add these to your project.clj dependencies:
 
 ```clojure
 [co.elastic.apm/apm-agent-api "AGENT_VERSION"]
-[clojure-elastic-apm "0.8.0"]
+[clojure-elastic-apm "0.13.0"]
 ```
 
 Note, in the agent configuration, the `elastic.apm.application_packages` option should be the top level namespace in your
@@ -343,7 +343,7 @@ There are some tests for the functionality. To run them, you need to have Elasti
 as containers:
 
 ```bash
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 Then, to run tests:
