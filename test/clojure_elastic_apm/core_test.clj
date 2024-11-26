@@ -31,8 +31,8 @@
     (let [tx-details (es-find-first-document (str "(processor.event:transaction%20AND%20transaction.id:" @transaction-id ")"))]
       (is (= "TestTransaction" (get-in tx-details [:transaction :name])))
       (is (= "1" (get-in tx-details [:labels :t1])))
-      (is (= 2 (get-in tx-details [:labels :t2])))
-      (is (true? (get-in tx-details [:labels :t3])))
+      (is (= "2" (get-in tx-details [:labels :t2])))
+      (is (= "true" (get-in tx-details [:labels :t3])))
       (is (= "Label 4" (get-in tx-details [:labels :t4])))
       (is (= "test-result" (get-in tx-details [:transaction :result])))
       (is (= "success" (get-in tx-details [:event :outcome]))))))
