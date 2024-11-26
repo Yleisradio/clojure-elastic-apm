@@ -1,5 +1,6 @@
 (ns clojure-elastic-apm.core
-  (:import [co.elastic.apm.api ElasticApm Transaction Span HeaderExtractor Outcome]))
+  (:require [clojure.string :as string])
+  (:import [co.elastic.apm.api ElasticApm Transaction Span HeaderExtractor HeadersExtractor Outcome]))
 
 (set! *warn-on-reflection* true)
 
@@ -39,11 +40,23 @@
 (defn set-outcome-unknown [^Span span-or-tx]
   (set-outcome span-or-tx outcome-unknown))
 
-(defn trace-extractor ^HeaderExtractor [traceparent]
+(defn ^:deprecated trace-extractor
+  "DEPRECATED: Do not use. This function sets the value of every trace context
+  header (i.e. both \"traceparent\" and \"tracestate\") to the value you pass
+  it."
+  ^HeaderExtractor [traceparent]
   (reify HeaderExtractor
     (getFirstHeader [_ _] traceparent)))
 
 (def type-request Transaction/TYPE_REQUEST)
+
+(defn- header-values [headers header-name]
+  ;; "Where there are multiple headers with the same name, the adapter must
+  ;; concatenate the values into a single string, using the ASCII `,` character
+  ;; as a delimiter."
+  ;;
+  ;; -- https://github.com/ring-clojure/ring/blob/master/SPEC.md#headers
+  (some-> (get headers header-name) (string/split #",")))
 
 (defn start-transaction
   ([]
@@ -53,9 +66,25 @@
      ^String tx-type :type
      tags :tags
      labels :labels
-     traceparent :traceparent}]
-   (let [tx (if traceparent
-              (ElasticApm/startTransactionWithRemoteParent (trace-extractor traceparent))
+     headers :headers
+     :as options}]
+   (let [tx (cond
+              headers
+              (ElasticApm/startTransactionWithRemoteParent
+                (reify HeaderExtractor
+                  (getFirstHeader [_ name]
+                    (first (header-values headers name))))
+                (reify HeadersExtractor
+                  (getAllHeaders [_ name]
+                    (header-values headers name))))
+
+              ;; Retained only for backwards compatibility. Use :headers
+              ;; instead.
+              (:traceparent options)
+              (ElasticApm/startTransactionWithRemoteParent
+                (trace-extractor (:traceparent options)))
+
+              :else
               (ElasticApm/startTransaction))]
      (when tx-name
        (set-name tx tx-name))
