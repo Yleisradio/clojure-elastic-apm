@@ -13,10 +13,11 @@ services:
     ports:
       - "9200:9200"
       - "9300:9300"
-    deploy:
-      resources:
-        limits:
-          memory: 1000M
+# Might be needed when running locally, but seemed to fail CI build
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 1000M
   kibana:
     image: "docker.elastic.co/kibana/kibana:8.16.0"
     ports:
